@@ -1,0 +1,21 @@
+{
+  "name": "app",
+  "version": "1.0.0",
+  "description": "",
+  "homepage": "https://github.com/SRamoras/ProjetoFinalJS#readme",
+  "bugs": {
+    "url": "https://github.com/SRamoras/ProjetoFinalJS/issues"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/SRamoras/ProjetoFinalJS.git"
+  },
+  "license": "ISC",
+  "author": "",
+  "type": "commonjs",
+  "main": "index.js",
+  "scripts": {
+    "start": "node src/index.js", 
+    "test": "echo \"Error: no test specified\" && exit 1"
+  }
+}
