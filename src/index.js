@@ -72,6 +72,18 @@ function assertCategoriaValida(categoria) {
 	}
 }
 
+function assertString(value, label) {
+	if (typeof value !== "string") {
+			throw new Error(`${label} Deve ser uma string`);
+	}
+}
+
+function assertQuatity(quantidade) {
+	if (!quantidade >= 1) {
+			throw new Error(`Quantidade tem de ser >= 1`);
+	}
+}
+
 // ==========================================
 // PARTE 1 - Modelos principais (classes)
 // ==========================================
@@ -91,22 +103,31 @@ function assertCategoriaValida(categoria) {
 
 class Produto {
 	constructor({ sku = crypto.randomUUID(), nome, preco, fabricante, categoria, numeroMaximoParcelas }) {
-        this.sku = sku
+        
+		assertString(sku, "sku")
+		assertString(nome, "nome")
+		assertString(fabricante, "fabricante")
+
+		assertPositiveNumber(preco, "preco")
+
+		assertCategoriaValida(categoria)
+
+        if(numeroMaximoParcelas < 1 || numeroMaximoParcelas > 24){
+            throw new Error("Numero de parcelas abaixo nao esta dentro do limite entre 1 a 24");
+        }
+		
+		this.sku = sku
         this.nome = nome
         this.preco = preco
         this.fabricante = fabricante
         this.categoria = categoria
         this.numeroMaximoParcelas = numeroMaximoParcelas
-
-        if(this.numeroMaximoParcelas < 1 || this.numeroMaximoParcelas > 24){
-            throw new Error("Numero de parcelas abaixo nao esta dentro do limite entre 1 a 24");
-        }
 	}
 
 	getValorDeParcela(numeroDeParcelas) {
         if(numeroDeParcelas >= 1 && numeroDeParcelas <= this.numeroMaximoParcelas){
-            return (preco / numeroDeParcelas).toFixed(2)
-        }else {
+            return formatBRL(this.preco / numeroDeParcelas)
+        } else {
             throw new Error("TODO: implementar getValorDeParcela");
         }
 	}
@@ -124,34 +145,30 @@ class Produto {
 
 class Cliente {
 	constructor({ id = crypto.randomUUID(), nome, tipo = "REGULAR", saldoPontos = 0 }) {
+
+		assertString(id, "id")
+		assertString(nome, "nome")
+
+		if(tipo !== "REGULAR" || tipo !== "VIP"){
+			throw new Error("Client tipo nao é REGULAR ou VIP");
+		}
+
+		assertPositiveNumber(saldoPontos, "saldoPontos")
+		
 		this.id = id
 		this.nome = nome
 		this.tipo = tipo
 		this.saldoPontos = saldoPontos
-        if(this.saldoPonto < 0){
-            throw new Error("Valor de saldo inferior a 0");
-        }
 	}
 
 	adicionarPontos(pontos) {
-        
-        if(pontos > 0){
-            return this.saldoPontos += pontos 
-        } else {
-            throw new Error("Pontos inferior a 0");
-        }
-		
+        assertPositiveNumber(pontos, "pontos")
+        return this.saldoPontos += pontos 
 	}
 
 	resgatarPontos(pontos) {
-		updatedSaldoPontos = this.saldoPontos - pontos
-        if(updatedSaldoPontos < 0){
-            updatedSaldoPontos = 0
-        }
-
-        this.saldoPontos = updatedSaldoPontos
-        return this.saldoPontos
-        throw new Error("TODO: implementar resgatarPontos");
+        assertPositiveNumber(pontos, "pontos")
+		return this.saldoPontos = this.saldoPontos - pontos
 	}
 }
 
@@ -163,21 +180,25 @@ class Cliente {
 // Observação: o carrinho usa precoUnitario do momento (para simular mudança de preço no catálogo).
 
 class ItemCarrinho {
-	constructor({ sku = crypto.randomUUID(), quantidade, precoUnitario }) {
+	constructor({ sku = crypto.randomUUID(), quantidade = 1, precoUnitario }) {
+		
+		assertString(sku, "sku")
+
+		assertPositiveNumber(quantidade, "quantidade")
+
+		assertPositiveNumber(precoUnitario, "preco Unitario")
+
         this.sku = sku
         this.quantidade = quantidade
         this.precoUnitario = precoUnitario
-        if(this.quantidade < 0) {
-            throw new Error("Quatidade menor que 0");
+
+        if(this.quantidade <= 0) {
+            throw new Error("Quatidade menor ou igual a 0");
         }
 	}
 
 	getTotal() {
-        if(this.quantidade > 0 || this.precoUnitario > 0) {
-            return this.quantidade * this.precoUnitario
-        } else {
-		    throw new Error("Valores invalidos");
-        }
+        return this.quantidade * this.precoUnitario
 	}
 }
 
@@ -192,53 +213,72 @@ class ItemCarrinho {
 // - garantirDisponibilidade(sku, quantidade)
 
 class Estoque{
+
 	constructor() {
-        this.estoque = new Map([]);
+        this.estoque = new Map();
 	}
 
 	definirQuantidade(sku, quantidade) {
-        if(quantidade > 0){
-            map.set(sku, quantidade)
-        } else {
-            throw new Error("quantidade invalida");
-        }
+		assertString(sku, "sku")
+		assertPositiveNumber(quantidade, "quantidade")
+		assertQuatity(quantidade)
+
+        this.estoque.set(sku, quantidade)
 	}
 
 	adicionar(sku, quantidade) {
-		if(quantidade < 0){
-            let updatedQuantity = map.get(sku) + quantidade
-            map.set(sku ,updatedQuantity)
-        } else {
-            throw new Error("quantidade menor que 0");
-        }
+		assertString(sku, "sku")
+		assertPositiveNumber(quantidade, "quantidade")
+		assertQuatity(quantidade)
+
+        let updatedQuantity = map.get(sku) + quantidade
+        this.estoque.set(sku ,updatedQuantity)
 	}
 
 	remover(sku, quantidade) {
-		if(quantidade > 0){
-            let updatedQuantity = map.get(sku) - quantidade
-            map.set(sku ,updatedQuantity)
-        } else {
-            throw new Error("quantidade maior que 0");
-        }
+		assertString(sku, "sku")
+		assertPositiveNumber(quantidade, "quantidade")
+		assertQuatity(quantidade)
+
+        let updatedQuantity = this.estoque.get(sku) - quantidade
+        this.estoque.set(sku, updatedQuantity)
 	}
 
 	getQuantidade(sku) {
-        if(sku){
-            map.get(sku)
-        } else {
-		    throw new Error("TODO: implementar getQuantidade");            
-        }
+		assertString(sku, "sku")
+
+        return this.estoque.get(sku) ?? 0
 	}
 
 	garantirDisponibilidade(sku, quantidade) {
-        stock = map.get(sku)
+		assertString(sku, "sku")
+		assertPositiveNumber(quantidade, "quantidade")
+		assertQuatity(quantidade)
+
+        stock = getQuantidade(sku)
 		if(stock > quantidade){
             console.log(`Sim existem mais de ${quantidade} unidades do produto ${sku}`)
+			return true
         } else {
-            throw new Error("TODO: implementar garantirDisponibilidade");
+            throw new Error("Quantidade superiror pedida superioro ao numero do stock");
         }
 	}
 }
+
+// const estoque = Estoque();
+
+// const map = new Map();
+
+// const skus = map.keys()
+
+// estoque.adicionar("123", 5);
+// estoque.adicionar("1234", 5);
+// estoque.adicionar("1235", 5);
+
+// for (const key of estoque.estoque.keys) {
+// 	skus.push(key)
+// }
+
 
 // 5) Crie a classe Catalogo
 // Use Map para guardar { sku -> Produto }
@@ -251,31 +291,32 @@ class Estoque{
 
 class Catalogo{
 	constructor() {
-        this.catalogo = new Map([]);
+        this.items = new Map();
 	}
 
 	adicionarProduto(produto) {
         if(produto){
-            map.set(crypto.randomUUID(), produto)
+            this.items.set(crypto.randomUUID(), produto)
         } else {
             throw new Error("adicione um produto");
         }
 	}
 
 	getProduto(sku) {
-		return map.get(sku)
+		return this.items.get(sku)
 	}
 
 	listarPorCategoria(categoria) {
-		this.catalogo.map((produto) => {
+		//return Array.from(this.catalogo.values())
+		this.items.values().map((produto) => {
             if(produto.categoria === categoria){
-                return console.log(produto)
+                return produto
             }
         })
 	}
 
 	atualizarPreco(sku, novoPreco) {
-		this.catalogo.map((produto) => {
+		this.items.map((produto) => {
             if(produto.sku === sku){
                 return {...produto, preco: novoPreco}
             }
@@ -296,33 +337,75 @@ class Catalogo{
 class CarrinhoDeCompras {
 	constructor({ catalogo, estoque }) {
 		this.estoque = estoque
-		this.catalogo = catalogo
+		this.catalogo = catalogo // Catalogo
+		this.carrinhoDeCompras = new Map()
 	}
-
+	
 	adicionarItem(sku, quantidade) {
-        
-		throw new Error("TODO: implementar adicionarItem");
+		if (this.estoque.getQuantidade >= quantidade) {
+			this.carrinhoDeCompras.set(sku, quantidade)
+		} else {
+			throw new Error("Quantidade maior do que existe em stock");
+		}
 	}
 
 	removerItem(sku) {
-		
-		throw new Error("TODO: implementar removerItem");
+		if(this.carrinhoDeCompras.includes(sku)) {
+			this.carrinhoDeCompras.delete(sku) ?? 0
+		} else {
+			throw new Error("sku invalido");
+		}
 	}
 
 	alterarQuantidade(sku, novaQuantidade) {
-		// TODO
-		throw new Error("TODO: implementar alterarQuantidade");
+		if(this.carrinhoDeCompras.includes(sku)) {
+			this.carrinhoDeCompras.set(sku, novaQuantidade);
+		} else {
+			throw new Error("sku invalido");
+		}
 	}
 
 	listarItens() {
-		// TODO
-		throw new Error("TODO: implementar listarItens");
+		for (const key in this.carrinhoDeCompras) {
+			return `${key}: ${this.carrinhoDeCompras[key]}`
+		}
 	}
 
+	// getSubtotal() {
+	// 	let skuListOnCarrinhoCompras = Object.keys(this.carrinhoDeCompras) // skus
+	// 	let quatidadeListOnCarrinhoCompras = Object.values(this.carrinhoDeCompras) // quantidades
+
+	// 	let totalPrice = 0
+	// 	let totalQuatidade = 0
+
+	// 	this.catalogo.items.map((sku, produto) => { 
+	// 		if(Object.values(item).includes(skuListOnCarrinhoCompras)){
+	// 			Object.values(item).map(produto => {
+	// 				totalPrice += produto.preco
+	// 			})
+	// 		}
+	// 	})
+
+	// 	for(let item of quatidadeListOnCarrinhoCompras) {
+	// 		totalQuatidade *= item
+	// 	}
+
+	// 	return finalPrice * totalQuatidade
+	// }
+
 	getSubtotal() {
-		// TODO
-		throw new Error("TODO: implementar getSubtotal");
+		const skus = this.carrinhoDeCompras.keys()
+		let total = 0
+
+		for (const sku of skus) {
+			const produto = this.catalogo.items.get(sku);
+			const quantidade = this.carrinhoDeCompras.get(sku)
+			total += produto.preco * quantidade;
+		}
+
+		return total
 	}
+
 }
 
 // ==========================================
@@ -381,12 +464,11 @@ class CarrinhoDeCompras {
 
 class MotorDePrecos {
 	constructor({ catalogo }) {
-		// TODO
-		throw new Error("TODO: implementar MotorDePrecos");
+		this.catalogo = catalogo
 	}
 
 	calcular({ cliente, itens, cupomCodigo }) {
-		// TODO
+		{}
 		throw new Error("TODO: implementar calcular");
 	}
 }
