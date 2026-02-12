@@ -303,11 +303,12 @@ class Catalogo{
 	}
 
 	getProduto(sku) {
+		assertString(sku, "sku")
 		return this.items.get(sku)
 	}
 
 	listarPorCategoria(categoria) {
-		//return Array.from(this.catalogo.values())
+		assertCategoriaValida(categoria)
 		this.items.values().map((produto) => {
             if(produto.categoria === categoria){
                 return produto
