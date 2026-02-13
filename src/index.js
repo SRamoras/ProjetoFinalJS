@@ -82,6 +82,7 @@ function assertQuatity(quantidade) {
 	if (!quantidade >= 1) {
 			throw new Error(`Quantidade tem de ser >= 1`);
 	}
+	assertPositiveNumber(quantidade, "quatidade")
 }
 
 // ==========================================
@@ -181,11 +182,8 @@ class Cliente {
 
 class ItemCarrinho {
 	constructor({ sku = crypto.randomUUID(), quantidade = 1, precoUnitario }) {
-		
 		assertString(sku, "sku")
-
-		assertPositiveNumber(quantidade, "quantidade")
-
+		assertQuatity(quantidade, "quantidade")
 		assertPositiveNumber(precoUnitario, "preco Unitario")
 
         this.sku = sku
@@ -215,44 +213,40 @@ class ItemCarrinho {
 class Estoque{
 
 	constructor() {
-        this.estoque = new Map();
+        this.item = new Map();
 	}
 
 	definirQuantidade(sku, quantidade) {
 		assertString(sku, "sku")
-		assertPositiveNumber(quantidade, "quantidade")
 		assertQuatity(quantidade)
 
-        this.estoque.set(sku, quantidade)
+        this.item.set(sku, quantidade)
 	}
 
 	adicionar(sku, quantidade) {
 		assertString(sku, "sku")
-		assertPositiveNumber(quantidade, "quantidade")
 		assertQuatity(quantidade)
 
         let updatedQuantity = map.get(sku) + quantidade
-        this.estoque.set(sku ,updatedQuantity)
+        this.item.set(sku ,updatedQuantity)
 	}
 
 	remover(sku, quantidade) {
 		assertString(sku, "sku")
-		assertPositiveNumber(quantidade, "quantidade")
 		assertQuatity(quantidade)
 
-        let updatedQuantity = this.estoque.get(sku) - quantidade
-        this.estoque.set(sku, updatedQuantity)
+        let updatedQuantity = this.item.get(sku) - quantidade
+        this.item.set(sku, updatedQuantity)
 	}
 
 	getQuantidade(sku) {
 		assertString(sku, "sku")
 
-        return this.estoque.get(sku) ?? 0
+        return this.item.get(sku) ?? 0
 	}
 
 	garantirDisponibilidade(sku, quantidade) {
 		assertString(sku, "sku")
-		assertPositiveNumber(quantidade, "quantidade")
 		assertQuatity(quantidade)
 
         stock = getQuantidade(sku)
@@ -304,24 +298,29 @@ class Catalogo{
 
 	getProduto(sku) {
 		assertString(sku, "sku")
+
 		return this.items.get(sku)
 	}
 
 	listarPorCategoria(categoria) {
 		assertCategoriaValida(categoria)
-		this.items.values().map((produto) => {
-            if(produto.categoria === categoria){
-                return produto
-            }
-        })
+
+		let listaProdutos = []
+		for(sku of this.items){
+			const produto = this.items.get(sku);
+			if(categoria === produto.categoria){
+				listaProdutos.push(produto)
+			}
+		}
+		return listaProdutos
 	}
 
 	atualizarPreco(sku, novoPreco) {
-		this.items.map((produto) => {
-            if(produto.sku === sku){
-                return {...produto, preco: novoPreco}
-            }
-        })
+		assertString(sku, "sku")
+		assertPositiveNumber(preco, "preco")
+
+		const produto = this.items.get(sku)
+		produto.preco = novoPreco
 	}
 }
 
@@ -338,11 +337,14 @@ class Catalogo{
 class CarrinhoDeCompras {
 	constructor({ catalogo, estoque }) {
 		this.estoque = estoque
-		this.catalogo = catalogo // Catalogo
+		this.catalogo = catalogo
 		this.carrinhoDeCompras = new Map()
 	}
 	
 	adicionarItem(sku, quantidade) {
+		assertString(sku, "sku")
+		assertQuatity(quantidade)
+
 		if (this.estoque.getQuantidade >= quantidade) {
 			this.carrinhoDeCompras.set(sku, quantidade)
 		} else {
@@ -351,6 +353,8 @@ class CarrinhoDeCompras {
 	}
 
 	removerItem(sku) {
+		assertString(sku, "sku")
+
 		if(this.carrinhoDeCompras.includes(sku)) {
 			this.carrinhoDeCompras.delete(sku) ?? 0
 		} else {
@@ -359,6 +363,9 @@ class CarrinhoDeCompras {
 	}
 
 	alterarQuantidade(sku, novaQuantidade) {
+		assertString(sku, "sku")
+		assertQuatity(novaQuantidade)
+
 		if(this.carrinhoDeCompras.includes(sku)) {
 			this.carrinhoDeCompras.set(sku, novaQuantidade);
 		} else {
@@ -367,9 +374,7 @@ class CarrinhoDeCompras {
 	}
 
 	listarItens() {
-		for (const key in this.carrinhoDeCompras) {
-			return `${key}: ${this.carrinhoDeCompras[key]}`
-		}
+		return this.carrinhoDeCompras
 	}
 
 	// getSubtotal() {
@@ -468,9 +473,82 @@ class MotorDePrecos {
 		this.catalogo = catalogo
 	}
 
-	calcular({ cliente, itens, cupomCodigo }) {
-		{}
-		throw new Error("TODO: implementar calcular");
+	calcular({ cliente, itens, cupomCodigo }) { // itens = Map(sku: quantidade) -> CarrinhhoDeCompras.listarItens()
+		
+		const breakdown = { 
+			subtotal,
+			descontos: [{ codigo, descricao, valor }],
+			totalDescontos,
+			impostoPorCategoria: { [categoria]: valor },
+			totalImpostos,
+			frete,
+			total
+		}
+
+
+		//R1
+		if(cliente.tipo === "VIP"){
+			breakdown.subtotal = breakdown.subtotal * 0.95
+		}
+		
+
+		//R2
+		if(cupomCodigo === "ETIC10"){
+			breakdown.subtotal = breakdown.subtotal * 0.90
+			breakdown.descontos.codigo = "ETIC10"
+			breakdown.descontos.descricao = "Desconto aplicado a estudantes da Etic"
+			breakdown.descontos.valor = "10%"
+		} else if(cupomCodigo === "FRETEGRATIS") {
+			breakdown.frete = 0
+			breakdown.descontos.codigo = "FRETEGRATIS"
+			breakdown.descontos.descricao = "Desconto aplicado para zerar o frete"
+			breakdown.descontos.valor = "100%"
+		} else if(cupomCodigo === "SEM-VIP") {
+			if(cliente.tipo === "VIP"){
+				breakdown.subtotal = breakdown.subtotal + breakdown.subtotal * 0.05
+			}
+			breakdown.descontos.codigo = "SEM-VIP"
+			breakdown.descontos.descricao = "Desconto aplicado para remover o desconto VIP"
+			breakdown.descontos.valor = "100%"
+		} 
+
+
+		//R3
+		const skus = itens.keys()
+		const contagemDeCategorias = new Map()
+
+		for (const sku of skus) {
+			const produto = this.catalogo.items.get(sku);
+			if(contagemDeCategorias === "vestuário"){
+				contagemDeCategorias.set(sku, produto.preco)
+			}
+		}
+		
+		const iterator = contagemDeCategorias.entries();
+		const iteratorList = Array.from(iterator)
+
+		function compareNumbers(a, b) {
+			return a[1] - b[1];
+		}
+
+		iteratorList.sort(compareNumbers)
+
+		menorPreco = iteratorList[0][1]
+		menorSku = iteratorList[0][0]
+
+		if(iteratorList.length >= 3){
+			iteratorList[0]
+			breakdown.subtotal = breakdown.subtotal - menorPreco
+			breakdown.descontos.codigo = "3 pague 2"
+			breakdown.descontos.descricao = "Desconto aplicado a 3 pague 2 produtos de vestuario"
+			breakdown.descontos.valor = "100%"
+		}
+
+
+		//R4
+		if(breakdown.subtotal >= 500){
+			breakdown.subtotal = breakdown.subtotal * 0.7
+		}
 	}
 }
 
@@ -492,18 +570,20 @@ class MotorDePrecos {
 
 class Pedido {
 	constructor({ id, clienteId, itens, breakdown }) {
-		// TODO
-		throw new Error("TODO: implementar Pedido");
+		this.id = id
+		this.clienteId = clienteId
+		this.itens = itens
+		this.breakdown = breakdown
+		this.status = "ABERTO" | "PAGO" | "CANCELADO"
+		this.createdAt = Date.now()
 	}
 
 	pagar() {
-		// TODO
-		throw new Error("TODO: implementar pagar");
+		this.status = "PAGO"
 	}
 
 	cancelar() {
-		// TODO
-		throw new Error("TODO: implementar cancelar");
+		this.status = "CANCELADO"
 	}
 }
 
