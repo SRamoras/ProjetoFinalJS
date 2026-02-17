@@ -786,13 +786,15 @@ class Pedido {
 	 *
 	 * @param {Object} params
 	 * @param {string} params.id - Identificador único do pedido.
+	 * @param {string} params.clienteNome - Nome do CLient.
 	 * @param {string} params.clienteId - Identificador do cliente dono do pedido.
 	 * @param {Array<[string, number]>} params.itens - Itens do pedido no formato [sku, quantidade].
 	 * @param {Object} params.breakdown - Quebra de valores (subtotal, descontos, impostos, frete, total).
 	 */
-	constructor({ id, clienteId, itens, breakdown }) {
+	constructor({ id, clienteId, clienteNome, itens, breakdown }) {
 		this.id = id
 		this.clienteId = clienteId
+		this.clienteNome = clienteNome // extra para depois mostrar no gerarLinhas()
 		this.itens = itens
 		this.breakdown = breakdown
 		this.status = "ABERTO"
@@ -886,6 +888,7 @@ class CaixaRegistradora {
 		const pedido = new Pedido({
 			id: crypto.randomUUID(),
 			clienteId: cliente.id,
+			clienteNome: cliente.nome,
 			itens: Array.from(items.entries()),
 			breakdown,
 		})
@@ -939,7 +942,7 @@ class CupomFiscal {
 		linhas.push(SEP);
 		linhas.push("CUPOM FISCAL");
 		linhas.push(`Pedido: ${this.pedido.id}`);
-		linhas.push(`Status: ${this.pedido.status}`);
+		linhas.push(`Cliente: ${this.pedido.clienteNome}`);
 		linhas.push(SEP);
 
 		linhas.push("ITENS");
@@ -984,7 +987,8 @@ class CupomFiscal {
 		linhas.push(`FRETE:           ${formatBRL(breakdown.frete)}`);
 		linhas.push(`TOTAL:           ${formatBRL(breakdown.total)}`);
 		linhas.push(SEP);
-
+		linhas.push(`Status:          ${this.pedido.status}`);
+		linhas.push(SEP);
 		return linhas;
 	}
 }
